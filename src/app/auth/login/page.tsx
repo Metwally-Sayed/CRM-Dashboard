@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -25,6 +25,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
 
   const {
     register,
@@ -42,19 +44,15 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
+        callbackUrl,
         redirect: false
       })
 
       if (result?.error) {
         setError('Invalid email or password')
       } else {
-        // Get the updated session to check user role
-        const session = await getSession()
-        if (session?.user?.role === 'ADMIN' || session?.user?.role === 'MANAGER') {
-          router.push('/dashboard')
-        } else {
-          router.push('/dashboard')
-        }
+        // Redirect to the callback URL or root page
+        router.push(callbackUrl)
       }
     } catch (error) {
       setError('An error occurred. Please try again.')
