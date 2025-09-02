@@ -14,7 +14,7 @@ const CustomerUpdateSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -22,8 +22,9 @@ export async function GET(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const customer = await prisma.customer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         addresses: true,
         orders: {
@@ -76,7 +77,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -89,12 +90,13 @@ export async function PUT(
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const validatedData = CustomerUpdateSchema.parse(body)
 
     // Check if customer exists
     const existingCustomer = await prisma.customer.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingCustomer) {
@@ -120,7 +122,7 @@ export async function PUT(
 
     // Update customer
     const updatedCustomer = await prisma.customer.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         birthDate: validatedData.birthDate ? new Date(validatedData.birthDate) : undefined
@@ -157,7 +159,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -170,9 +172,11 @@ export async function DELETE(
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
+    const { id } = await params
+    
     // Check if customer exists
     const existingCustomer = await prisma.customer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         orders: true
       }
@@ -195,7 +199,7 @@ export async function DELETE(
 
     // Delete customer (addresses will be deleted due to cascade)
     await prisma.customer.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json(

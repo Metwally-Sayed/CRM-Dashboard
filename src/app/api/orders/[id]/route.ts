@@ -16,7 +16,7 @@ const OrderUpdateSchema = z.object({
 // GET /api/orders/[id] - Get specific order
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -24,8 +24,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         customer: {
           select: {
@@ -74,7 +75,7 @@ export async function GET(
 // PUT /api/orders/[id] - Update order
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -87,12 +88,13 @@ export async function PUT(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const validatedData = OrderUpdateSchema.parse(body)
 
     // Check if order exists
     const existingOrder = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { items: true }
     })
 
@@ -116,7 +118,7 @@ export async function PUT(
     const updatedOrder = await prisma.$transaction(async (tx) => {
       // Update the order
       const order = await tx.order.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           ...validatedData,
           updatedAt: new Date()
@@ -185,7 +187,7 @@ export async function PUT(
 // DELETE /api/orders/[id] - Delete order (only if pending)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -198,9 +200,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
+    const { id } = await params
     // Check if order exists and is deletable
     const existingOrder = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { items: true }
     })
 
@@ -235,7 +238,7 @@ export async function DELETE(
 
       // Delete the order (cascade will delete items and payments)
       await tx.order.delete({
-        where: { id: params.id }
+        where: { id }
       })
     })
 

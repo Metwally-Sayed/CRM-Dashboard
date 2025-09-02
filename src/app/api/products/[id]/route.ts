@@ -18,9 +18,9 @@ const updateProductSchema = z.object({
 })
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 // GET /api/products/[id] - Get a specific product
@@ -34,8 +34,9 @@ export async function GET(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         category: true,
         variants: true,
@@ -76,12 +77,13 @@ export async function PUT(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const validatedData = updateProductSchema.parse(body)
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingProduct) {
@@ -107,7 +109,7 @@ export async function PUT(
 
     // Update the product
     const updatedProduct = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         category: true,
@@ -147,9 +149,10 @@ export async function DELETE(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         orderItems: true
       }
@@ -172,7 +175,7 @@ export async function DELETE(
 
     // Delete the product
     await prisma.product.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({

@@ -16,7 +16,7 @@ const UserUpdateSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -24,15 +24,16 @@ export async function GET(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     // Users can view their own profile, admins and managers can view all
-    if (session.user.id !== params.id && 
+    if (session.user.id !== id && 
         session.user.role !== 'ADMIN' && 
         session.user.role !== 'MANAGER') {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -64,7 +65,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -72,11 +73,12 @@ export async function PUT(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const validatedData = UserUpdateSchema.parse(body)
 
     // Users can update their own profile (except role), admins can update all
-    if (session.user.id !== params.id && session.user.role !== 'ADMIN') {
+    if (session.user.id !== id && session.user.role !== 'ADMIN') {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
@@ -90,7 +92,7 @@ export async function PUT(
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingUser) {
@@ -135,7 +137,7 @@ export async function PUT(
 
     // Update user
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -168,7 +170,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -176,13 +178,15 @@ export async function DELETE(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     // Only admins can delete users
     if (session.user.role !== 'ADMIN') {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
     // Prevent self-deletion
-    if (session.user.id === params.id) {
+    if (session.user.id === id) {
       return NextResponse.json(
         { message: 'Cannot delete your own account' },
         { status: 400 }
@@ -191,7 +195,7 @@ export async function DELETE(
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingUser) {
@@ -203,7 +207,7 @@ export async function DELETE(
 
     // Delete user (related sessions and accounts will be deleted due to cascade)
     await prisma.user.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json(
