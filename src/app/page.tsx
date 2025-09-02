@@ -1,32 +1,15 @@
-"use client";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
-
-export default function Home() {
-  const router = useRouter();
-  const { data: session, status } = useSession();
+export default async function Home() {
+  const session = await getServerSession(authOptions);
   
-  useEffect(() => {
-    if (status === "loading") return; // Still loading
-    
-    if (session) {
-      // User is authenticated, redirect to dashboard
-      router.push("/dashboard");
-    } else {
-      // User is not authenticated, redirect to login
-      router.push("/auth/login");
-    }
-  }, [session, status, router]);
-  
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+  if (session) {
+    // User is authenticated, redirect to dashboard
+    redirect("/dashboard");
+  } else {
+    // User is not authenticated, redirect to login
+    redirect("/auth/login");
   }
-  
-  return <>{}</>;
 }
