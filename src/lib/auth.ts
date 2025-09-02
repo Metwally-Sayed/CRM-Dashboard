@@ -1,39 +1,47 @@
-import { NextAuthOptions } from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import bcrypt from 'bcryptjs'
-import { prisma } from './prisma'
-import { UserRole } from '@prisma/client'
+import { UserRole } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "./prisma";
+
+// Determine base URL dynamically
+const getBaseUrl = () => {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.NEXTAUTH_URL || "http://localhost:3000";
+};
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: 'credentials',
+      name: "credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          return null;
         }
 
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email
-          }
-        })
+            email: credentials.email,
+          },
+        });
 
         if (!user) {
-          return null
+          return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
-        )
+        );
 
         if (!isPasswordValid) {
-          return null
+          return null;
         }
 
         return {
@@ -41,37 +49,40 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-        }
-      }
-    })
+        };
+      },
+    }),
   ],
   session: {
-    strategy: 'jwt'
+    strategy: "jwt",
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role
+        token.role = user.role;
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.sub!
-        session.user.role = token.role as UserRole
+        session.user.id = token.sub!;
+        session.user.role = token.role as UserRole;
       }
-      return session
+      return session;
     },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
-    }
+      const dynamicBaseUrl = getBaseUrl();
+      console.log("Redirect:", { url, baseUrl: dynamicBaseUrl }); // Debug
+      // Allow relative URLs
+      if (url.startsWith("/")) return `${dynamicBaseUrl}${url}`;
+      // Allow same-origin URLs
+      if (new URL(url).origin === dynamicBaseUrl) return url;
+      // Default to dashboard
+      return `${dynamicBaseUrl}/dashboard`;
+    },
   },
   pages: {
-    signIn: '/auth/login',
+    signIn: "/auth/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
-}
+};

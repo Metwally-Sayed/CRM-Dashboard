@@ -59,7 +59,7 @@ function LoginForm() {
       } else {
         // Redirect to the callback URL or root page
         //router.push(callbackUrl);
-        router.push("/dashboard");
+        router.push(callbackUrl || "/dashboard");
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
