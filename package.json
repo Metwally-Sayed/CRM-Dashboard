@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "prisma generate && prisma db push && npm run db:seed && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx scripts/seed.ts",
